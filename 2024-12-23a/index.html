@@ -7,8 +7,8 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="author" content="Alexandre Rangel" />
-  <meta name="description" content="Livro HYDRA — Copacabana (2022-05-19) fullscreen Hydra patch" />
-  <title>Copacabana — 2022-05-19 · hydras</title>
+  <meta name="description" content="Livro HYDRA — mandala (2024-12-23a) fullscreen Hydra patch" />
+  <title>mandala — 2024-12-23a · hydras</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     html, body {
@@ -26,7 +26,7 @@
   </style>
 </head>
 <body>
-  <canvas id="hydra-canvas" aria-label="Hydra Copacabana"></canvas>
+  <canvas id="hydra-canvas" aria-label="Hydra mandala"></canvas>
   <script src="https://cdn.jsdelivr.net/npm/hydra-synth@1.3.29/dist/hydra-synth.js"></script>
   <script>
 (function () {
@@ -55,29 +55,51 @@
   window.addEventListener('resize', onResize);
   window.addEventListener('orientationchange', function () { setTimeout(onResize, 100); });
 
-  // Exact patch — patches/2022-05-19.js
+  // Exact patch — patches/2024-12-23a.js
   async function runPatch() {
-    speed=0.75
+    speed=0.1
+    // Core layer: "Straight-edged circles" simulated with square-based rotations
+    shape(4, 0.6, 0.9)
+      .scale(() => Math.abs(Math.sin(time * 0.3)) * 0.5 + 0.4) // Dynamic size change
+      .repeat(4, 4) // Create a grid-like structure
+      .modulate(osc(10, 0.2, 0.8).rotate(Math.PI / 4)) // Use square-based distortion
+      .rotate(({time}) => Math.sin(time * 0.1) * Math.PI / 4) // Rotation skewing the idea of curves
+      .color(1.0, 0.3, 0.6)
+      .luma(0.2)
+      .out(o0);
     
-    x=()=>
-    osc(35,0,0).rotate(Math.PI/2).thresh(0.05,0)
-    .modulateScrollY( osc(40,-0.02,0) , ()=>Math.sin(time/2)*0.075 )
-    .mult(
-    osc(35,0,0).rotate(Math.PI/2).thresh(0.05,0).scrollY(0.1)
-    .modulateScrollY( osc(40,-0.02,0) , ()=>Math.cos(time/4)*0.075 )
-    )
-    .scrollY(.01,-.025)
+    // Background layer: Square "curves" with sharp oscillating brightness
+    osc(15, 0.05, 0.8)
+      .kaleid(4) // Reinforce symmetry of "4"
+      .modulateRotate(shape(4, 0.4).scale(2).luma(0.5).invert(), 0.3)
+      .colorama(0.8)
+      .scale(() => Math.abs(Math.cos(time * 0.4)) * 0.3 + 1.2) // Dynamic breathing
+      .blend(noise(3, 0.5).modulate(osc(10), 0.3), 0.5)
+      .out(o1);
     
-    x()
-    .mult(
-      x()
-      .modulatePixelate( gradient(1) , 100)
-      .diff(gradient(0.25).rotate(()=>time/3)).color(1,0.5,1)
-      .saturate( ()=>Math.sin(time/3)*2 )
-    )
-    .rotate(Math.PI)
+    // Secondary modulation layer: Overlays to distort "geometry"
+    osc(8, 0.03, 0.9)
+      .rotate(() => Math.abs(Math.sin(time * 0.5)) * Math.PI / 4) // Exaggerating square-based rotation
+      .mult(shape(4, 0.7).rotate(Math.PI / 4))
+      .modulate(noise(6, 0.3), 0.6)
+      .add(shape(4, 0.4).scale(2).invert(), 0.4)
+      .color(0.6, 0.9, 1.0)
+      .scrollY(0.3, 0.1)
+      .out(o2);
     
-      .out()
+    // Combine all layers with square-distorted interactions
+    src(o0)
+      .layer(src(o1).blend(src(o2).scale(0.8).rotate(Math.PI / 4), 0.6))
+      .modulate(osc(6, 0.05, 0.8).kaleid(4), 0.3)
+      .add(shape(4, 0.8).scale(1.5).luma(0.5).invert(), 0.2)
+      .blend(osc(5, 0.2, 0.6).kaleid(4).modulateRotate(noise(2), 0.4), 0.5)
+    .rotate(0.1,0.003)
+    .kaleid(4)
+    .contrast(1.25)
+      .out(o3);
+    
+    // Render final composite
+    render(o3);
   }
   runPatch().catch(function (e) { console.error(e); });
 })();

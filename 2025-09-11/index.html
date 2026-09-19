@@ -7,8 +7,8 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="author" content="Alexandre Rangel" />
-  <meta name="description" content="Livro HYDRA — Copacabana (2022-05-19) fullscreen Hydra patch" />
-  <title>Copacabana — 2022-05-19 · hydras</title>
+  <meta name="description" content="Livro HYDRA — Bandeiras MOTIM (2025-09-11) fullscreen Hydra patch" />
+  <title>Bandeiras MOTIM — 2025-09-11 · hydras</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     html, body {
@@ -26,7 +26,7 @@
   </style>
 </head>
 <body>
-  <canvas id="hydra-canvas" aria-label="Hydra Copacabana"></canvas>
+  <canvas id="hydra-canvas" aria-label="Hydra Bandeiras MOTIM"></canvas>
   <script src="https://cdn.jsdelivr.net/npm/hydra-synth@1.3.29/dist/hydra-synth.js"></script>
   <script>
 (function () {
@@ -55,29 +55,32 @@
   window.addEventListener('resize', onResize);
   window.addEventListener('orientationchange', function () { setTimeout(onResize, 100); });
 
-  // Exact patch — patches/2022-05-19.js
+  // Exact patch — patches/2025-09-11.js
   async function runPatch() {
-    speed=0.75
+    // licensed with CC BY-NC-SA 4.0 https://creativecommons.org/licenses/by-nc-sa/4.0/
+    // "the-wall"
+    // Alexandre Rangel
+    // www.alexandrerangel.art.br/hydra.html
     
-    x=()=>
-    osc(35,0,0).rotate(Math.PI/2).thresh(0.05,0)
-    .modulateScrollY( osc(40,-0.02,0) , ()=>Math.sin(time/2)*0.075 )
-    .mult(
-    osc(35,0,0).rotate(Math.PI/2).thresh(0.05,0).scrollY(0.1)
-    .modulateScrollY( osc(40,-0.02,0) , ()=>Math.cos(time/4)*0.075 )
+    speed=.034
+    osc(48,-.1,0).thresh([.3,.7].fast(.75),0).color(0,0,1)
+    
+    .add(
+        osc(28,.1,0).thresh([.3,.7].fast(.75),0).rotate(3.14/4)
+        .color(1,0,0)
+        .modulateScale( osc(64,-.01,0).thresh([.3,.7].fast(.75),0) )
     )
-    .scrollY(.01,-.025)
-    
-    x()
-    .mult(
-      x()
-      .modulatePixelate( gradient(1) , 100)
-      .diff(gradient(0.25).rotate(()=>time/3)).color(1,0.5,1)
-      .saturate( ()=>Math.sin(time/3)*2 )
+    .diff(
+        osc(28,.1,0).thresh([.3,.7].fast(.5),0).rotate(3.14/2)
+        .color(1,0,1)
+        .modulateScale( osc(64,-.015,0).thresh([.3,.7].fast(.5),0) )
     )
-    .rotate(Math.PI)
+    .modulateRotate( osc(54,-.005,0).thresh([.3,.7].fast(.25),0) )
+    .modulateScale( osc(44,-.020,0).thresh([.3,.7].fast(.25),0) )
+    .colorama( ()=>Math.sin(time/18)*.01222+9.89)
+    .scale(2.5)
     
-      .out()
+    .out()
   }
   runPatch().catch(function (e) { console.error(e); });
 })();

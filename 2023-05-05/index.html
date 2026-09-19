@@ -7,8 +7,8 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="author" content="Alexandre Rangel" />
-  <meta name="description" content="Livro HYDRA — Copacabana (2022-05-19) fullscreen Hydra patch" />
-  <title>Copacabana — 2022-05-19 · hydras</title>
+  <meta name="description" content="Livro HYDRA — 2023-05-05 (2023-05-05) fullscreen Hydra patch" />
+  <title>2023-05-05 — 2023-05-05 · hydras</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     html, body {
@@ -26,7 +26,7 @@
   </style>
 </head>
 <body>
-  <canvas id="hydra-canvas" aria-label="Hydra Copacabana"></canvas>
+  <canvas id="hydra-canvas" aria-label="Hydra 2023-05-05"></canvas>
   <script src="https://cdn.jsdelivr.net/npm/hydra-synth@1.3.29/dist/hydra-synth.js"></script>
   <script>
 (function () {
@@ -55,28 +55,42 @@
   window.addEventListener('resize', onResize);
   window.addEventListener('orientationchange', function () { setTimeout(onResize, 100); });
 
-  // Exact patch — patches/2022-05-19.js
+  // Exact patch — patches/2023-05-05.js
   async function runPatch() {
-    speed=0.75
+    x1 = Math.random(); x2 = Math.random()
+    x3 = Math.random(); x4 = Math.random()
+    x5 = Math.random(); x6 = Math.random()
+    y1 = Math.random(); y2 = Math.random()
+    y3 = Math.random(); y4 = Math.random()
+    y5 = Math.random(); y6 = Math.random()
     
-    x=()=>
-    osc(35,0,0).rotate(Math.PI/2).thresh(0.05,0)
-    .modulateScrollY( osc(40,-0.02,0) , ()=>Math.sin(time/2)*0.075 )
-    .mult(
-    osc(35,0,0).rotate(Math.PI/2).thresh(0.05,0).scrollY(0.1)
-    .modulateScrollY( osc(40,-0.02,0) , ()=>Math.cos(time/4)*0.075 )
+    speed=0.6
+    noise(1,0.010).contrast(5).pixelate(16+(x1*5),16+(x1*5))
+    .scrollX(x1,0).scrollY(y1,0)
+    .modulate(noise(1.5,0.011).contrast(5).pixelate(16+(x1*5),16+(x1*5))
+             .scrollX(x2,0).scrollY(y2,0))
+    .diff(
+      noise(1.5,0.011).contrast(5).pixelate(20,20)
+      .modulate(noise(2,0.012).contrast(5).pixelate(80,80)
+               .scrollX(x3,0).scrollY(y3,0))
     )
-    .scrollY(.01,-.025)
-    
-    x()
-    .mult(
-      x()
-      .modulatePixelate( gradient(1) , 100)
-      .diff(gradient(0.25).rotate(()=>time/3)).color(1,0.5,1)
-      .saturate( ()=>Math.sin(time/3)*2 )
+    .diff(
+      noise(2,0.012).contrast(5).pixelate(80,80)
+      .scrollX(x4,0).scrollY(y4,0)
+      .modulate(noise(2.5,0.013).contrast(5).pixelate(40,40)
+                .scrollX(x5,0).scrollY(y5,0))
     )
-    .rotate(Math.PI)
-    
+    .mult(noise(2.5,0.013).contrast(5).pixelate(40,40)
+           .scrollX(x6,0).scrollY(y6,0))
+    //.color(0.7,0.5,0.5)
+    .invert()
+    .diff(src(o0))
+    .scale(1.25)
+    .scrollX(0.007,-0.007)
+    .diff(src(o0).scale(1.1),x1)
+    .scrollY( 0.01, ()=>Math.sin(time/999)*0.001 )
+    //.mult( noise(4,0.011).contrast(1).pixelate(20,20),0.5 )
+    .invert(x2)
       .out()
   }
   runPatch().catch(function (e) { console.error(e); });

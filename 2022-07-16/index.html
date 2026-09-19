@@ -7,8 +7,8 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="author" content="Alexandre Rangel" />
-  <meta name="description" content="Livro HYDRA — Copacabana (2022-05-19) fullscreen Hydra patch" />
-  <title>Copacabana — 2022-05-19 · hydras</title>
+  <meta name="description" content="Livro HYDRA — Mandala (2022-07-16) fullscreen Hydra patch" />
+  <title>Mandala — 2022-07-16 · hydras</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     html, body {
@@ -26,7 +26,7 @@
   </style>
 </head>
 <body>
-  <canvas id="hydra-canvas" aria-label="Hydra Copacabana"></canvas>
+  <canvas id="hydra-canvas" aria-label="Hydra Mandala"></canvas>
   <script src="https://cdn.jsdelivr.net/npm/hydra-synth@1.3.29/dist/hydra-synth.js"></script>
   <script>
 (function () {
@@ -55,29 +55,29 @@
   window.addEventListener('resize', onResize);
   window.addEventListener('orientationchange', function () { setTimeout(onResize, 100); });
 
-  // Exact patch — patches/2022-05-19.js
+  // Exact patch — patches/2022-07-16.js
   async function runPatch() {
-    speed=0.75
-    
-    x=()=>
-    osc(35,0,0).rotate(Math.PI/2).thresh(0.05,0)
-    .modulateScrollY( osc(40,-0.02,0) , ()=>Math.sin(time/2)*0.075 )
-    .mult(
-    osc(35,0,0).rotate(Math.PI/2).thresh(0.05,0).scrollY(0.1)
-    .modulateScrollY( osc(40,-0.02,0) , ()=>Math.cos(time/4)*0.075 )
+    osc( Math.random()*50, Math.random()*-0.05 )
+    .kaleid( 100 )
+    .diff(
+    osc( Math.random()*40, Math.random()*0.04 )
+    .kaleid( 8 )
     )
-    .scrollY(.01,-.025)
-    
-    x()
-    .mult(
-      x()
-      .modulatePixelate( gradient(1) , 100)
-      .diff(gradient(0.25).rotate(()=>time/3)).color(1,0.5,1)
-      .saturate( ()=>Math.sin(time/3)*2 )
+    .diff(
+    osc( Math.random()*30, Math.random()*-0.03 )
+    .kaleid( 12 )
+    .colorama( Math.random()*-0.25 ) 
     )
-    .rotate(Math.PI)
-    
-      .out()
+    .modulateScale(
+    osc( Math.random()*20, Math.random()*0.02 )
+    .kaleid( 4 )
+      , (Math.random()*2)-1
+    )
+    .modulateScale(
+    osc(3,-0.01).kaleid(100)
+      ,2)
+    .pixelate(100,20)
+    .out()
   }
   runPatch().catch(function (e) { console.error(e); });
 })();

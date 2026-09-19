@@ -7,8 +7,8 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="author" content="Alexandre Rangel" />
-  <meta name="description" content="Livro HYDRA — Copacabana (2022-05-19) fullscreen Hydra patch" />
-  <title>Copacabana — 2022-05-19 · hydras</title>
+  <meta name="description" content="Livro HYDRA — 2022-11-14 (2022-11-14) fullscreen Hydra patch" />
+  <title>2022-11-14 — 2022-11-14 · hydras</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     html, body {
@@ -26,7 +26,7 @@
   </style>
 </head>
 <body>
-  <canvas id="hydra-canvas" aria-label="Hydra Copacabana"></canvas>
+  <canvas id="hydra-canvas" aria-label="Hydra 2022-11-14"></canvas>
   <script src="https://cdn.jsdelivr.net/npm/hydra-synth@1.3.29/dist/hydra-synth.js"></script>
   <script>
 (function () {
@@ -55,28 +55,28 @@
   window.addEventListener('resize', onResize);
   window.addEventListener('orientationchange', function () { setTimeout(onResize, 100); });
 
-  // Exact patch — patches/2022-05-19.js
+  // Exact patch — patches/2022-11-14.js
   async function runPatch() {
-    speed=0.75
-    
-    x=()=>
-    osc(35,0,0).rotate(Math.PI/2).thresh(0.05,0)
-    .modulateScrollY( osc(40,-0.02,0) , ()=>Math.sin(time/2)*0.075 )
-    .mult(
-    osc(35,0,0).rotate(Math.PI/2).thresh(0.05,0).scrollY(0.1)
-    .modulateScrollY( osc(40,-0.02,0) , ()=>Math.cos(time/4)*0.075 )
+    speed=0.5
+    osc(60,-0.04,0).thresh(0.5,0.1)
+    .add(
+    osc(60,-0.02/2,0).thresh(0.5,0.3).color(1,0,2)
     )
-    .scrollY(.01,-.025)
-    
-    x()
-    .mult(
-      x()
-      .modulatePixelate( gradient(1) , 100)
-      .diff(gradient(0.25).rotate(()=>time/3)).color(1,0.5,1)
-      .saturate( ()=>Math.sin(time/3)*2 )
+    .diff(
+    osc(60,-0.01/2,0).rotate(Math.PI/2).thresh(0.5,0.02)
     )
-    .rotate(Math.PI)
-    
+    .pixelate(
+      ()=>Math.sin(time/21)*15+16,
+      ()=>Math.cos(time/14)*15+16,
+    )  
+    .saturate( ()=>Math.sin(time/3)*0.7+0.7 )
+    // them distorts
+    .modulateRotate(
+      osc(10,0.01).kaleid(99),()=>Math.sin(time*0.2)*-Math.PI/4
+    )
+    .modulateScale(
+      osc(10,0.01).kaleid(63),()=>Math.cos(time*0.4)*.3-0.4
+    )
       .out()
   }
   runPatch().catch(function (e) { console.error(e); });

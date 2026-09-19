@@ -7,8 +7,8 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="author" content="Alexandre Rangel" />
-  <meta name="description" content="Livro HYDRA — Copacabana (2022-05-19) fullscreen Hydra patch" />
-  <title>Copacabana — 2022-05-19 · hydras</title>
+  <meta name="description" content="Livro HYDRA — 2024-02-24a (2024-02-24a) fullscreen Hydra patch" />
+  <title>2024-02-24a — 2024-02-24a · hydras</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     html, body {
@@ -26,7 +26,7 @@
   </style>
 </head>
 <body>
-  <canvas id="hydra-canvas" aria-label="Hydra Copacabana"></canvas>
+  <canvas id="hydra-canvas" aria-label="Hydra 2024-02-24a"></canvas>
   <script src="https://cdn.jsdelivr.net/npm/hydra-synth@1.3.29/dist/hydra-synth.js"></script>
   <script>
 (function () {
@@ -55,29 +55,27 @@
   window.addEventListener('resize', onResize);
   window.addEventListener('orientationchange', function () { setTimeout(onResize, 100); });
 
-  // Exact patch — patches/2022-05-19.js
+  // Exact patch — patches/2024-02-24a.js
   async function runPatch() {
-    speed=0.75
-    
-    x=()=>
-    osc(35,0,0).rotate(Math.PI/2).thresh(0.05,0)
-    .modulateScrollY( osc(40,-0.02,0) , ()=>Math.sin(time/2)*0.075 )
-    .mult(
-    osc(35,0,0).rotate(Math.PI/2).thresh(0.05,0).scrollY(0.1)
-    .modulateScrollY( osc(40,-0.02,0) , ()=>Math.cos(time/4)*0.075 )
+    speed=0.2
+    osc(10,-0.02,0.1) .posterize( ()=>Math.sin(time/7)*4+5 )
+    .modulate(
+      osc(30,0.01,0)
+      .posterize( ()=>Math.sin(time/14)*4+5 )
     )
-    .scrollY(.01,-.025)
-    
-    x()
-    .mult(
-      x()
-      .modulatePixelate( gradient(1) , 100)
-      .diff(gradient(0.25).rotate(()=>time/3)).color(1,0.5,1)
-      .saturate( ()=>Math.sin(time/3)*2 )
+    .modulateRotate(
+      voronoi(3,0.05)
+      .posterize( ()=>Math.sin(time/14)*4+5 )
+      , [0,Math.PI*2,Math.PI,Math.PI*-2].fast(0.5)
     )
-    .rotate(Math.PI)
-    
-      .out()
+    .modulateScale(
+      osc(3,-0.03,0)
+      .posterize( 3 )
+      , [1,1.5].fast(1.2)
+    )
+    .saturate( 0 ).posterize(16)
+    //.colorama( [-1,1,-0.2,0.03,-0.5,-0.7,-10,0.2,0.5,1].fast(0.5) )
+    .out()
   }
   runPatch().catch(function (e) { console.error(e); });
 })();

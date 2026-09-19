@@ -7,8 +7,8 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="author" content="Alexandre Rangel" />
-  <meta name="description" content="Livro HYDRA — Copacabana (2022-05-19) fullscreen Hydra patch" />
-  <title>Copacabana — 2022-05-19 · hydras</title>
+  <meta name="description" content="Livro HYDRA — 2025-09-08 (2025-09-08) fullscreen Hydra patch" />
+  <title>2025-09-08 — 2025-09-08 · hydras</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     html, body {
@@ -26,7 +26,7 @@
   </style>
 </head>
 <body>
-  <canvas id="hydra-canvas" aria-label="Hydra Copacabana"></canvas>
+  <canvas id="hydra-canvas" aria-label="Hydra 2025-09-08"></canvas>
   <script src="https://cdn.jsdelivr.net/npm/hydra-synth@1.3.29/dist/hydra-synth.js"></script>
   <script>
 (function () {
@@ -55,29 +55,26 @@
   window.addEventListener('resize', onResize);
   window.addEventListener('orientationchange', function () { setTimeout(onResize, 100); });
 
-  // Exact patch — patches/2022-05-19.js
+  // Exact patch — patches/2025-09-08.js
   async function runPatch() {
-    speed=0.75
+    // many red lines
     
-    x=()=>
-    osc(35,0,0).rotate(Math.PI/2).thresh(0.05,0)
-    .modulateScrollY( osc(40,-0.02,0) , ()=>Math.sin(time/2)*0.075 )
-    .mult(
-    osc(35,0,0).rotate(Math.PI/2).thresh(0.05,0).scrollY(0.1)
-    .modulateScrollY( osc(40,-0.02,0) , ()=>Math.cos(time/4)*0.075 )
-    )
-    .scrollY(.01,-.025)
+    osc( ()=>Math.sin(time/2)*30+130,0.1,0)
+    .rotate(Math.PI/2)
+    .thresh(0.99,0.02)
+    .modulate( noise(()=>Math.sin(time/3)*0.1+0.9,1.25),0.2 )
+    .modulateScale( osc(2,0.1),0.5 )
+    .color(1,0,0)
+    .out()
     
-    x()
-    .mult(
-      x()
-      .modulatePixelate( gradient(1) , 100)
-      .diff(gradient(0.25).rotate(()=>time/3)).color(1,0.5,1)
-      .saturate( ()=>Math.sin(time/3)*2 )
-    )
-    .rotate(Math.PI)
-    
-      .out()
+    speed=0.1
+    osc( ()=>Math.sin(time/2)*30+130,0.02,0)
+    .rotate(Math.PI/2)
+    .thresh(0.99,0.02)
+    .modulate( noise(()=>Math.sin(time/3)*0.1+0.9,1.25),0.1 )
+    .modulateScale( osc(2,0.05),0.5 )
+    .color(1,0,0)
+    .out()
   }
   runPatch().catch(function (e) { console.error(e); });
 })();

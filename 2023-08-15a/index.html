@@ -7,8 +7,8 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="author" content="Alexandre Rangel" />
-  <meta name="description" content="Livro HYDRA — Copacabana (2022-05-19) fullscreen Hydra patch" />
-  <title>Copacabana — 2022-05-19 · hydras</title>
+  <meta name="description" content="Livro HYDRA — Hydra 2023-08-15 (2023-08-15a) fullscreen Hydra patch" />
+  <title>Hydra 2023-08-15 — 2023-08-15a · hydras</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     html, body {
@@ -26,7 +26,7 @@
   </style>
 </head>
 <body>
-  <canvas id="hydra-canvas" aria-label="Hydra Copacabana"></canvas>
+  <canvas id="hydra-canvas" aria-label="Hydra Hydra 2023-08-15"></canvas>
   <script src="https://cdn.jsdelivr.net/npm/hydra-synth@1.3.29/dist/hydra-synth.js"></script>
   <script>
 (function () {
@@ -55,29 +55,26 @@
   window.addEventListener('resize', onResize);
   window.addEventListener('orientationchange', function () { setTimeout(onResize, 100); });
 
-  // Exact patch — patches/2022-05-19.js
+  // Exact patch — patches/2023-08-15a.js
   async function runPatch() {
-    speed=0.75
+    // quad
     
-    x=()=>
-    osc(35,0,0).rotate(Math.PI/2).thresh(0.05,0)
-    .modulateScrollY( osc(40,-0.02,0) , ()=>Math.sin(time/2)*0.075 )
-    .mult(
-    osc(35,0,0).rotate(Math.PI/2).thresh(0.05,0).scrollY(0.1)
-    .modulateScrollY( osc(40,-0.02,0) , ()=>Math.cos(time/4)*0.075 )
-    )
-    .scrollY(.01,-.025)
+    shape(100,.9,.002)
     
-    x()
-    .mult(
-      x()
-      .modulatePixelate( gradient(1) , 100)
-      .diff(gradient(0.25).rotate(()=>time/3)).color(1,0.5,1)
-      .saturate( ()=>Math.sin(time/3)*2 )
-    )
-    .rotate(Math.PI)
+    .diff( shape(100,()=>Math.sin(time/9)+0.9,.002) ).color(1,1,0)
+    .diff( shape(100,()=>Math.cos(time/11)+0.7,.002) )
     
-      .out()
+    .diff( shape(100,()=>Math.sin(time/13)+0.5,.002) ).color(0,1,0)
+    .diff( shape(100,()=>Math.cos(time/15)+0.4,.002) )
+    
+    .diff( shape(100,()=>Math.sin(time/17)+0.3,.002) ).color(0,1,1)
+    .diff( shape(100,()=>Math.cos(time/19)+0.2,.002))
+    
+    .diff( shape([1,1.1,1.2,1.3,1.4,1.5,1.6,1.7,1.8,1.9].fast(0.8),0.5,0)
+          .rotate([0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1].fast(0.4))
+          .rotate(1)
+          .scrollX(0.010,-0.012) )
+    .out()
   }
   runPatch().catch(function (e) { console.error(e); });
 })();

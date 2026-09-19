@@ -7,8 +7,8 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="author" content="Alexandre Rangel" />
-  <meta name="description" content="Livro HYDRA — Copacabana (2022-05-19) fullscreen Hydra patch" />
-  <title>Copacabana — 2022-05-19 · hydras</title>
+  <meta name="description" content="Livro HYDRA — 2024-04-11b (2024-04-11b) fullscreen Hydra patch" />
+  <title>2024-04-11b — 2024-04-11b · hydras</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     html, body {
@@ -26,7 +26,7 @@
   </style>
 </head>
 <body>
-  <canvas id="hydra-canvas" aria-label="Hydra Copacabana"></canvas>
+  <canvas id="hydra-canvas" aria-label="Hydra 2024-04-11b"></canvas>
   <script src="https://cdn.jsdelivr.net/npm/hydra-synth@1.3.29/dist/hydra-synth.js"></script>
   <script>
 (function () {
@@ -55,29 +55,25 @@
   window.addEventListener('resize', onResize);
   window.addEventListener('orientationchange', function () { setTimeout(onResize, 100); });
 
-  // Exact patch — patches/2022-05-19.js
+  // Exact patch — patches/2024-04-11b.js
   async function runPatch() {
+    // made for https://hydra.ojack.xyz/dev
+    
+    await loadScript("https://cdn.statically.io/gl/metagrowing/extra-shaders-for-hydra/main/lib/lib-screen.js")
+    await loadScript("https://cdn.statically.io/gl/metagrowing/extra-shaders-for-hydra/main/lib/lib-pattern.js")
+    
     speed=0.75
-    
-    x=()=>
-    osc(35,0,0).rotate(Math.PI/2).thresh(0.05,0)
-    .modulateScrollY( osc(40,-0.02,0) , ()=>Math.sin(time/2)*0.075 )
-    .mult(
-    osc(35,0,0).rotate(Math.PI/2).thresh(0.05,0).scrollY(0.1)
-    .modulateScrollY( osc(40,-0.02,0) , ()=>Math.cos(time/4)*0.075 )
-    )
-    .scrollY(.01,-.025)
-    
-    x()
-    .mult(
-      x()
-      .modulatePixelate( gradient(1) , 100)
-      .diff(gradient(0.25).rotate(()=>time/3)).color(1,0.5,1)
-      .saturate( ()=>Math.sin(time/3)*2 )
-    )
-    .rotate(Math.PI)
-    
-      .out()
+    r1 = () => 0.1 * time /2.0;
+    r2 = () => 0.05 * time /2.0;
+    r3 = () => -0.025 * time /2.0;
+    r4 = () => -0.075 * time;
+    spiral(2.0, 5.0, 0.2).rotate(r1).modulateRotate( noise(0.75,0.015).ditherrndcolor() )
+      .mult( spiral(1.0, 3.0, 0.2).color(0,0.75,0.75).modulateRotate( noise(0.75,0.020).ditherrndcolor() ) )
+      .diff( spiral(2.0, 5.0, 0.15).rotate(r2).color(0.333,0,0).modulateRotate( noise(0.75,0.025).ditherrndcolor() ) )
+      .diff( spiral(2.0, 5.0, 0.15/2.0).rotate(r3).color(0,0,0.333).modulateRotate( noise(0.75,0.030).ditherrndcolor() ) )
+    .rotate(r4)
+      .dither2()
+    .out()
   }
   runPatch().catch(function (e) { console.error(e); });
 })();
