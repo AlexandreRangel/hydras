@@ -1,0 +1,16 @@
+{
+  "name": "hydras — Alexandre Rangel",
+  "short_name": "hydras",
+  "description": "Fullscreen Hydra patches · Livro HYDRA",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": [
+    "fullscreen",
+    "standalone"
+  ],
+  "orientation": "any",
+  "background_color": "#000000",
+  "theme_color": "#000000",
+  "lang": "pt-BR"
+}

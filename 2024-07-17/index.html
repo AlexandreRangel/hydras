@@ -6,8 +6,12 @@
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="hydras" />
+  <meta name="theme-color" content="#000000" />
+  <meta name="color-scheme" content="dark" />
   <meta name="author" content="Alexandre Rangel" />
   <meta name="description" content="Livro HYDRA — 2024-07-17 (2024-07-17) fullscreen Hydra patch" />
+  <link rel="manifest" href="../manifest.webmanifest" />
   <title>2024-07-17 — 2024-07-17 · hydras</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -22,6 +26,7 @@
       -webkit-user-select: none;
       user-select: none;
       overscroll-behavior: none;
+      -webkit-tap-highlight-color: transparent;
     }
     #hydra-canvas {
       position: fixed;
@@ -29,25 +34,53 @@
       top: 0;
       display: block;
       background: #000;
-      /* width/height set in JS to match viewport CSS px */
+      z-index: 1;
     }
+    #fs-hint {
+      position: fixed;
+      left: 50%;
+      bottom: max(18px, env(safe-area-inset-bottom, 0px));
+      transform: translateX(-50%);
+      z-index: 5;
+      padding: 10px 14px;
+      border-radius: 999px;
+      background: rgba(0,0,0,0.55);
+      color: #eee;
+      font: 500 13px/1.2 -apple-system, system-ui, sans-serif;
+      letter-spacing: 0.02em;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.35s ease;
+      text-align: center;
+      max-width: min(92vw, 340px);
+    }
+    #fs-hint.show { opacity: 1; }
+    #fs-hint.gone { display: none; }
   </style>
 </head>
 <body>
   <canvas id="hydra-canvas" aria-label="Hydra 2024-07-17"></canvas>
+  <div id="fs-hint" aria-hidden="true">Toque para tela cheia</div>
   <script src="https://cdn.jsdelivr.net/npm/hydra-synth@1.3.29/dist/hydra-synth.js"></script>
   <script>
 (function () {
   var canvas = document.getElementById('hydra-canvas');
-  // Higher internal res than CSS px, capped for mobile GPU smoothness (iOS + Android)
+  var hint = document.getElementById('fs-hint');
   var MAX_DPR = 2.5;
   var MAX_SIDE = 2048;
+
+  function isStandalone() {
+    return window.matchMedia('(display-mode: standalone)').matches
+      || window.matchMedia('(display-mode: fullscreen)').matches
+      || window.navigator.standalone === true;
+  }
 
   function viewport() {
     var vv = window.visualViewport;
     var cssW = Math.max(1, Math.floor((vv && vv.width) || window.innerWidth || document.documentElement.clientWidth));
     var cssH = Math.max(1, Math.floor((vv && vv.height) || window.innerHeight || document.documentElement.clientHeight));
-    // Prefer landscape/portrait from actual layout size (works on open + rotate)
+    var offsetX = (vv && typeof vv.offsetLeft === 'number') ? vv.offsetLeft : 0;
+    var offsetY = (vv && typeof vv.offsetTop === 'number') ? vv.offsetTop : 0;
     var dpr = Math.min(window.devicePixelRatio || 1, MAX_DPR);
     var w = Math.max(1, Math.floor(cssW * dpr));
     var h = Math.max(1, Math.floor(cssH * dpr));
@@ -57,14 +90,15 @@
       w = Math.max(1, Math.floor(w * scale));
       h = Math.max(1, Math.floor(h * scale));
     }
-    return { w: w, h: h, cssW: cssW, cssH: cssH, dpr: dpr };
+    return { w: w, h: h, cssW: cssW, cssH: cssH, offsetX: offsetX, offsetY: offsetY, dpr: dpr };
   }
 
   function applyCanvasCss(n) {
+    // Fill only the *visible* viewport (under Safari/Chrome UI chrome)
     canvas.style.width = n.cssW + 'px';
     canvas.style.height = n.cssH + 'px';
-    canvas.style.left = '0px';
-    canvas.style.top = '0px';
+    canvas.style.left = n.offsetX + 'px';
+    canvas.style.top = n.offsetY + 'px';
   }
 
   var s = viewport();
@@ -90,19 +124,18 @@
   var resizeTimer = null;
   var lastKey = '';
   function onResize() {
-    // iOS often reports stale sizes mid-rotation — sample a few times
     var attempts = 0;
     function tick() {
       attempts++;
       var n = viewport();
-      var key = n.w + 'x' + n.h + '@' + n.cssW + 'x' + n.cssH;
+      var key = n.w + 'x' + n.h + '@' + n.cssW + 'x' + n.cssH + '+' + n.offsetX + ',' + n.offsetY;
       if (key !== lastKey) {
         lastKey = key;
         applyHydraSize(n);
       }
-      if (attempts < 8) {
+      if (attempts < 10) {
         clearTimeout(resizeTimer);
-        resizeTimer = setTimeout(tick, attempts < 3 ? 50 : 120);
+        resizeTimer = setTimeout(tick, attempts < 4 ? 40 : 100);
       }
     }
     tick();
@@ -112,13 +145,58 @@
   window.addEventListener('orientationchange', function () { setTimeout(onResize, 30); });
   if (window.visualViewport) {
     window.visualViewport.addEventListener('resize', onResize, { passive: true });
+    window.visualViewport.addEventListener('scroll', onResize, { passive: true });
   }
   if (window.screen && screen.orientation && screen.orientation.addEventListener) {
     screen.orientation.addEventListener('change', function () { setTimeout(onResize, 30); });
   }
-  // First paint after load (covers cold open already in landscape)
   setTimeout(onResize, 0);
   setTimeout(onResize, 200);
+
+  // Cleaner fullscreen request
+  function enterFullscreen() {
+    var el = document.documentElement;
+    if (document.fullscreenElement || document.webkitFullscreenElement) return;
+    var fn = el.requestFullscreen || el.webkitRequestFullscreen || el.webkitRequestFullScreen;
+    if (fn) {
+      try {
+        var ret = fn.call(el, { navigationUI: 'hide' });
+        if (ret && ret.catch) ret.catch(function () {
+          var fn2 = canvas.requestFullscreen || canvas.webkitRequestFullscreen;
+          if (fn2) {
+            var r = fn2.call(canvas);
+            if (r && r.catch) r.catch(function () {});
+          }
+        });
+      } catch (e) {
+        try {
+          var fn3 = canvas.requestFullscreen || canvas.webkitRequestFullscreen;
+          if (fn3) fn3.call(canvas);
+        } catch (e2) {}
+      }
+    }
+  }
+
+  function hideHint() {
+    if (!hint) return;
+    hint.classList.remove('show');
+    setTimeout(function () { hint.classList.add('gone'); }, 400);
+  }
+
+  if (!isStandalone()) {
+    setTimeout(function () { if (hint) hint.classList.add('show'); }, 600);
+    setTimeout(hideHint, 4500);
+  } else if (hint) {
+    hint.classList.add('gone');
+  }
+
+  function onFirstPointer() {
+    enterFullscreen();
+    hideHint();
+    onResize();
+  }
+  document.body.addEventListener('pointerdown', onFirstPointer, { once: true, passive: true });
+  document.body.addEventListener('touchend', onFirstPointer, { once: true, passive: true });
 
   // Exact patch — patches/2024-07-17.js
   async function runPatch() {
