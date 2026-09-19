@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -12,16 +12,24 @@
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     html, body {
-      width: 100vw; width: 100dvw;
-      height: 100vh; height: 100dvh;
-      overflow: hidden; background: #000;
-      touch-action: none; -webkit-user-select: none; user-select: none;
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #000;
+      touch-action: none;
+      -webkit-user-select: none;
+      user-select: none;
+      overscroll-behavior: none;
     }
     #hydra-canvas {
-      position: fixed; inset: 0;
-      width: 100vw !important; width: 100dvw !important;
-      height: 100vh !important; height: 100dvh !important;
-      display: block; object-fit: cover; background: #000;
+      position: fixed;
+      left: 0;
+      top: 0;
+      display: block;
+      background: #000;
+      /* width/height set in JS to match viewport CSS px */
     }
   </style>
 </head>
@@ -31,29 +39,86 @@
   <script>
 (function () {
   var canvas = document.getElementById('hydra-canvas');
-  function size() {
-    return {
-      w: Math.max(1, Math.floor(window.innerWidth * (window.devicePixelRatio || 1))),
-      h: Math.max(1, Math.floor(window.innerHeight * (window.devicePixelRatio || 1))),
-      cssW: window.innerWidth,
-      cssH: window.innerHeight
-    };
+  // Higher internal res than CSS px, capped for mobile GPU smoothness (iOS + Android)
+  var MAX_DPR = 2.5;
+  var MAX_SIDE = 2048;
+
+  function viewport() {
+    var vv = window.visualViewport;
+    var cssW = Math.max(1, Math.floor((vv && vv.width) || window.innerWidth || document.documentElement.clientWidth));
+    var cssH = Math.max(1, Math.floor((vv && vv.height) || window.innerHeight || document.documentElement.clientHeight));
+    // Prefer landscape/portrait from actual layout size (works on open + rotate)
+    var dpr = Math.min(window.devicePixelRatio || 1, MAX_DPR);
+    var w = Math.max(1, Math.floor(cssW * dpr));
+    var h = Math.max(1, Math.floor(cssH * dpr));
+    var longSide = Math.max(w, h);
+    if (longSide > MAX_SIDE) {
+      var scale = MAX_SIDE / longSide;
+      w = Math.max(1, Math.floor(w * scale));
+      h = Math.max(1, Math.floor(h * scale));
+    }
+    return { w: w, h: h, cssW: cssW, cssH: cssH, dpr: dpr };
   }
-  var s = size();
+
+  function applyCanvasCss(n) {
+    canvas.style.width = n.cssW + 'px';
+    canvas.style.height = n.cssH + 'px';
+    canvas.style.left = '0px';
+    canvas.style.top = '0px';
+  }
+
+  var s = viewport();
+  applyCanvasCss(s);
   var hydra = new Hydra({
     canvas: canvas,
     detectAudio: false,
     makeGlobal: true,
-    width: s.cssW,
-    height: s.cssH
+    width: s.w,
+    height: s.h,
+    preserveDrawingBuffer: false
   });
-  function onResize() {
-    var n = size();
-    if (typeof hydra.resize === 'function') hydra.resize(n.cssW, n.cssH);
-    else if (typeof hydra.setResolution === 'function') hydra.setResolution(n.cssW, n.cssH);
+
+  function applyHydraSize(n) {
+    applyCanvasCss(n);
+    try {
+      if (typeof setResolution === 'function') setResolution(n.w, n.h);
+      else if (hydra && typeof hydra.setResolution === 'function') hydra.setResolution(n.w, n.h);
+      else if (hydra && typeof hydra.resize === 'function') hydra.resize(n.w, n.h);
+    } catch (e) { console.warn('resize', e); }
   }
-  window.addEventListener('resize', onResize);
-  window.addEventListener('orientationchange', function () { setTimeout(onResize, 100); });
+
+  var resizeTimer = null;
+  var lastKey = '';
+  function onResize() {
+    // iOS often reports stale sizes mid-rotation — sample a few times
+    var attempts = 0;
+    function tick() {
+      attempts++;
+      var n = viewport();
+      var key = n.w + 'x' + n.h + '@' + n.cssW + 'x' + n.cssH;
+      if (key !== lastKey) {
+        lastKey = key;
+        applyHydraSize(n);
+      }
+      if (attempts < 8) {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(tick, attempts < 3 ? 50 : 120);
+      }
+    }
+    tick();
+  }
+
+  window.addEventListener('resize', onResize, { passive: true });
+  window.addEventListener('orientationchange', function () { setTimeout(onResize, 30); });
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', onResize, { passive: true });
+  }
+  if (window.screen && screen.orientation && screen.orientation.addEventListener) {
+    screen.orientation.addEventListener('change', function () { setTimeout(onResize, 30); });
+  }
+  // First paint after load (covers cold open already in landscape)
+  setTimeout(onResize, 0);
+  setTimeout(onResize, 200);
 
   // Exact patch — patches/2024-01-23.js
   async function runPatch() {
