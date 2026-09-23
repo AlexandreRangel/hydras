@@ -10,7 +10,7 @@
   <meta name="theme-color" content="#000000" />
   <meta name="color-scheme" content="dark" />
   <meta name="author" content="Alexandre Rangel" />
-  <meta name="description" content="Livro HYDRA — realidade aumentada: coloque um patch Hydra ao vivo numa parede ou no chão" />
+  <meta name="description" content="Livro HYDRA — realidade aumentada: WebXR no Android, modo soft (câmera + giroscópio) no iPhone" />
   <link rel="manifest" href="../manifest.webmanifest" />
   <title>AR — Livro HYDRA · hydras</title>
   <style>
@@ -41,7 +41,26 @@
       inset: 0;
       z-index: 1;
     }
-    #ar-root canvas { display: block; }
+    #ar-root canvas { display: block; width: 100%; height: 100%; }
+    #soft-camera {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      background: #000;
+      z-index: 0;
+      pointer-events: none;
+      opacity: 0;
+    }
+    body.is-soft #soft-camera { opacity: 1; }
+    body.is-presenting {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+    }
     #landing {
       position: relative;
       z-index: 2;
@@ -65,7 +84,9 @@
     #landing .meta { color: #777; font-size: 0.8rem; }
     #landing a { color: #fff; }
     #ar-button-slot { margin: 0.75rem 0 0.25rem; }
-    #ARButton {
+    #ar-button-slot:has([hidden]) { display: none; margin: 0; }
+    #ARButton,
+    #soft-enter {
       position: static !important;
       left: auto !important;
       bottom: auto !important;
@@ -80,6 +101,7 @@
       opacity: 1 !important;
       cursor: pointer;
     }
+    #soft-enter[hidden] { display: none; }
     #fallback {
       display: none;
       color: #f0c36d;
@@ -91,11 +113,37 @@
     }
     #fallback.show { display: block; }
     #ar-overlay {
+      display: none;
       position: fixed;
       inset: 0;
       z-index: 20;
       pointer-events: none;
     }
+    body.is-presenting #ar-overlay { display: block; }
+    #ar-reticle {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 72px;
+      height: 72px;
+      margin: -36px 0 0 -36px;
+      border: 2px solid rgba(255,255,255,0.8);
+      border-radius: 50%;
+      pointer-events: none;
+      box-shadow: 0 0 0 1px rgba(0,0,0,0.35);
+    }
+    #ar-reticle::after {
+      content: '';
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 6px;
+      height: 6px;
+      margin: -3px 0 0 -3px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.9);
+    }
+    #ar-reticle[hidden] { display: none; }
     #ar-tap-layer {
       position: absolute;
       inset: 0;
@@ -171,11 +219,14 @@
     <p>Aponte a câmera para uma parede ou o chão. Toque para colocar o painel Hydra 16:9. Ande ao redor — o quadro fica no lugar.</p>
     <p>Duplo toque à direita: próximo patch. À esquerda: anterior. Grave com o sistema do telefone.</p>
     <div id="ar-button-slot"></div>
-    <p id="fallback" role="status">Este aparelho ou navegador não oferece WebXR AR. No Android, abra no Chrome atualizado. No iPhone, o Safari precisa de suporte a WebXR AR. É preciso HTTPS e permissão da câmera.</p>
+    <button type="button" id="soft-enter" hidden aria-label="Entrar em modo soft">Entrar em modo soft</button>
+    <p id="fallback" role="status">Este aparelho não oferece WebXR AR. No iPhone, use o modo soft: câmera traseira + giroscópio. O painel acompanha a orientação do telefone — não ancora na parede como no Android (Chrome). É preciso HTTPS e permissão da câmera e do movimento.</p>
     <p class="meta"><a href="../">← hydras</a> · © Alexandre Rangel · <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="license">CC BY-NC-SA 4.0</a></p>
   </main>
-  <div id="ar-overlay" style="display:none">
+  <video id="soft-camera" playsinline webkit-playsinline muted autoplay></video>
+  <div id="ar-overlay">
     <div id="ar-tap-layer" aria-hidden="true"></div>
+    <div id="ar-reticle" hidden></div>
     <p id="ar-title"></p>
     <p id="ar-hint"></p>
     <button type="button" id="ar-close" aria-label="Sair de AR">×</button>
