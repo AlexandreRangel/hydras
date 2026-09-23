@@ -14,10 +14,21 @@ const DEG_TO_RAD = Math.PI / 180;
 const frontDirection = new THREE.Vector3();
 
 /**
+ * Wraps a getUserMedia failure without writing the read-only DOMException.code.
+ */
+function taggedCameraError(source, softCode) {
+  const err = new Error(source && source.message ? source.message : softCode);
+  err.softCode = softCode;
+  err.name = source && source.name ? source.name : 'Error';
+  err.cause = source;
+  return err;
+}
+
+/**
  * Maps getUserMedia / play failures to a PT-BR landing message.
  */
 export function cameraErrorMessage(err) {
-  if (err && (err.code === 'camera-denied' || err.name === 'NotAllowedError')) {
+  if (err && (err.softCode === 'camera-denied' || err.name === 'NotAllowedError')) {
     return 'A câmera foi recusada. No iPhone: Ajustes → Safari → Câmera. Permita o acesso e toque de novo em Entrar em modo soft.';
   }
   return 'Não foi possível abrir a câmera traseira. É preciso HTTPS e um aparelho com câmera. No iPhone, permita o acesso à câmera no Safari.';
@@ -44,9 +55,7 @@ export async function requestOrientationPermission() {
  */
 export async function attachRearCamera(videoEl) {
   if (!navigator.mediaDevices || typeof navigator.mediaDevices.getUserMedia !== 'function') {
-    const err = new Error('camera-unavailable');
-    err.code = 'camera-unavailable';
-    throw err;
+    throw taggedCameraError(null, 'camera-unavailable');
   }
   let stream;
   try {
@@ -56,14 +65,15 @@ export async function attachRearCamera(videoEl) {
     });
   } catch (firstErr) {
     if (firstErr && firstErr.name === 'NotAllowedError') {
-      firstErr.code = 'camera-denied';
-      throw firstErr;
+      throw taggedCameraError(firstErr, 'camera-denied');
     }
     try {
       stream = await navigator.mediaDevices.getUserMedia({ audio: false, video: true });
     } catch (secondErr) {
-      secondErr.code = secondErr.name === 'NotAllowedError' ? 'camera-denied' : 'camera-unavailable';
-      throw secondErr;
+      throw taggedCameraError(
+        secondErr,
+        secondErr && secondErr.name === 'NotAllowedError' ? 'camera-denied' : 'camera-unavailable'
+      );
     }
   }
   videoEl.setAttribute('playsinline', '');
