@@ -1,0 +1,534 @@
+// Load Tone.js by adding it to the head
+const toneScript = document.createElement('script')
+toneScript.src = "https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.min.js"
+document.head.appendChild(toneScript)
+
+// Create a global object to store our hue analysis data and settings
+window.quadrantHues = []
+window.gridConfig = {
+  rows: 2,
+  cols: 4,
+  total: 8 // Default 2x4 = 8 quadrants
+}
+
+// Basic Hydra setup - start with interesting visuals
+osc(20, 0.1, 0.8)
+  .kaleid(5)
+  .color(0.5, 0.3, 0.9)
+  .rotate(0.1, 0.1)
+  .modulate(noise(3, 0.1).rotate(() => Math.sin(time/2)))
+  .out(o0)
+
+// Initialize the hue array
+window.quadrantHues = Array(window.gridConfig.total).fill(0)
+
+// Wait for Tone.js to load
+toneScript.onload = () => {
+  console.log("Tone.js loaded!")
+
+  // Create a start button (Tone.js needs user interaction)
+  const startButton = document.createElement('button')
+  startButton.textContent = "Start Visuals-to-Sound System"
+  startButton.style.position = "absolute"
+  startButton.style.top = "10px"
+  startButton.style.left = "10px"
+  startButton.style.zIndex = "9999"
+  startButton.style.padding = "10px"
+  startButton.style.background = "#ff5500"
+  startButton.style.color = "white"
+  startButton.style.border = "none"
+  startButton.style.borderRadius = "4px"
+  startButton.style.cursor = "pointer"
+
+  startButton.onclick = async () => {
+    await Tone.start()
+    console.log("Audio system started")
+    startButton.style.display = "none"
+
+    // Setup audio instruments
+    setupAudioSystem()
+
+    // Setup quadrant analysis
+    setupQuadrantAnalysis()
+
+    // Setup visual controls and UI elements
+    setupVisualControls()
+  }
+
+  document.body.appendChild(startButton)
+}
+
+// Create all audio instruments and connect them
+function setupAudioSystem() {
+  // Define scales for note mapping - EXPANDED to 7 scales
+  window.scales = {
+    cMajor: ['C3', 'D3', 'E3', 'F3', 'G3', 'A3', 'B3', 'C4', 'D4', 'E4', 'F4', 'G4'],
+    aMinor: ['A2', 'B2', 'C3', 'D3', 'E3', 'F3', 'G3', 'A3', 'B3', 'C4', 'D4', 'E4'],
+    pentatonic: ['C3', 'D3', 'E3', 'G3', 'A3', 'C4', 'D4', 'E4', 'G4', 'A4', 'C5'],
+    blues: ['C3', 'Eb3', 'F3', 'Gb3', 'G3', 'Bb3', 'C4', 'Eb4', 'F4', 'Gb4', 'G4', 'Bb4'],
+    chromatic: ['C3', 'C#3', 'D3', 'D#3', 'E3', 'F3', 'F#3', 'G3', 'G#3', 'A3', 'A#3', 'B3', 'C4'], 
+    dDorian: ['D3', 'E3', 'F3', 'G3', 'A3', 'B3', 'C4', 'D4', 'E4', 'F4'],
+    wholeTone: ['C3', 'D3', 'E3', 'F#3', 'G#3', 'A#3', 'C4', 'D4', 'E4', 'F#4'],
+    phrygian: ['E3', 'F3', 'G3', 'A3', 'B3', 'C4', 'D4', 'E4', 'F4', 'G4'],
+    lydian: ['F3', 'G3', 'A3', 'B3', 'C4', 'D4', 'E4', 'F4', 'G4', 'A4'],
+    mixolydian: ['G3', 'A3', 'B3', 'C4', 'D4', 'E4', 'F4', 'G4', 'A4', 'B4']
+  }
+
+  // Start with C major
+  window.currentScale = window.scales.cMajor
+
+  // Create base synth types we'll use
+  window.baseSynthTypes = [
+    Tone.Synth, 
+    Tone.AMSynth, 
+    Tone.FMSynth, 
+    Tone.PluckSynth,
+    Tone.MetalSynth, 
+    Tone.MembraneSynth, 
+    Tone.DuoSynth, 
+    Tone.MonoSynth
+  ]
+
+  // Create effects
+  window.effectsChains = [
+    new Tone.Reverb(3).toDestination(),
+    new Tone.PingPongDelay("8n", 0.5).toDestination(),
+    new Tone.Chorus(4, 2.5, 0.5).toDestination(),
+    new Tone.Distortion(0.4).toDestination()
+  ]
+
+  // Function to create synths based on current grid size
+  window.createSynths = () => {
+    // Clean up any existing synths
+    if (window.synths) {
+      window.synths.forEach(synth => {
+        if (synth && typeof synth.dispose === 'function') {
+          synth.dispose()
+        }
+      })
+    }
+
+    // Create new array of synths
+    window.synths = []
+    const totalQuads = window.gridConfig.total
+
+    for (let i = 0; i < totalQuads; i++) {
+      // Choose a synth type (cycle through available types)
+      const SynthType = window.baseSynthTypes[i % window.baseSynthTypes.length]
+
+      // Choose an effect chain (distribute evenly)
+      const effectChain = window.effectsChains[Math.floor(i / (totalQuads / window.effectsChains.length)) % window.effectsChains.length]
+
+      // Create the synth
+      const synth = new SynthType().connect(effectChain)
+      window.synths.push(synth)
+    }
+
+    console.log(`Created ${window.synths.length} synths for ${totalQuads} quadrants`)
+  }
+
+  // Initial synths creation
+  window.createSynths()
+
+  // Function to handle playing sounds based on quadrant analysis
+  window.playQuadrantSounds = (time) => {
+    // For each quadrant
+    window.quadrantHues.forEach((hue, i) => {
+      // Skip if we don't have a synth for this quadrant
+      if (!window.synths[i]) return
+
+      // Only play if the hue is significant (not black)
+      if (hue > 0.05) {
+        // Map hue (0-1) to a note in our scale
+        const noteIndex = Math.floor(hue * window.currentScale.length)
+        const note = window.currentScale[noteIndex % window.currentScale.length]
+
+        // Calculate velocity based on hue intensity
+        const velocity = 0.3 + (hue * 0.7)
+
+        // Calculate row and column position
+        const col = i % window.gridConfig.cols
+        const row = Math.floor(i / window.gridConfig.cols)
+
+        // Duration based on column position (left to right = shorter to longer)
+        const durationValues = ["32n", "16n", "8n", "4n"]
+        const duration = durationValues[col % durationValues.length]
+
+        // Play pattern varies by row
+        const delay = (row * 0.1) + (Math.random() * 0.1)
+
+        // Trigger the note
+        window.synths[i].triggerAttackRelease(note, duration, time + delay, velocity)
+      }
+    })
+  }
+
+  // Start a clock to trigger sounds based on the quadrant analysis
+  Tone.Transport.scheduleRepeat((time) => {
+    window.playQuadrantSounds(time)
+  }, "8n")
+
+  // Start the transport
+  Tone.Transport.bpm.value = 90
+  Tone.Transport.start()
+}
+
+// Setup the quadrant analysis system
+function setupQuadrantAnalysis() {
+  // Create a hidden canvas for analyzing the Hydra output
+  const analysisCanvas = document.createElement('canvas')
+  analysisCanvas.width = 400
+  analysisCanvas.height = 300
+  analysisCanvas.style.display = 'none'
+  document.body.appendChild(analysisCanvas)
+
+  const analysisCtx = analysisCanvas.getContext('2d')
+
+  // Get the Hydra canvas
+  const hydraCanvas = document.querySelector('canvas')
+
+  // Function to analyze a specific quadrant
+  window.analyzeQuadrant = (quadrantIndex) => {
+    // Calculate quadrant position
+    const cols = window.gridConfig.cols
+    const rows = window.gridConfig.rows
+
+    const quadrantCol = quadrantIndex % cols
+    const quadrantRow = Math.floor(quadrantIndex / cols)
+
+    const quadrantWidth = hydraCanvas.width / cols
+    const quadrantHeight = hydraCanvas.height / rows
+
+    const sourceX = quadrantCol * quadrantWidth
+    const sourceY = quadrantRow * quadrantHeight
+
+    // Draw just this quadrant to our analysis canvas
+    analysisCtx.drawImage(
+      hydraCanvas,
+      sourceX, sourceY, quadrantWidth, quadrantHeight,
+      0, 0, analysisCanvas.width, analysisCanvas.height
+    )
+
+    // Get pixel data
+    const pixelData = analysisCtx.getImageData(0, 0, analysisCanvas.width, analysisCanvas.height).data
+
+    // Analyze hue
+    let totalR = 0, totalG = 0, totalB = 0
+
+    // Sample pixels (don't need to check every pixel for performance)
+    const sampleSize = 100
+    for (let i = 0; i < sampleSize; i++) {
+      const randomOffset = Math.floor(Math.random() * (pixelData.length / 4)) * 4
+      totalR += pixelData[randomOffset]
+      totalG += pixelData[randomOffset + 1]
+      totalB += pixelData[randomOffset + 2]
+    }
+
+    // Calculate average RGB
+    const avgR = totalR / sampleSize
+    const avgG = totalG / sampleSize
+    const avgB = totalB / sampleSize
+
+    // Convert RGB to HSL
+    const r = avgR / 255
+    const g = avgG / 255
+    const b = avgB / 255
+
+    const max = Math.max(r, g, b)
+    const min = Math.min(r, g, b)
+    let h, s, l = (max + min) / 2
+
+    if (max === min) {
+      h = s = 0 // achromatic
+    } else {
+      const d = max - min
+      s = l > 0.5 ? d / (2 - max - min) : d / (max + min)
+
+      switch (max) {
+        case r: h = (g - b) / d + (g < b ? 6 : 0); break
+        case g: h = (b - r) / d + 2; break
+        case b: h = (r - g) / d + 4; break
+      }
+
+      h /= 6
+    }
+
+    // Store the hue value (0-1)
+    window.quadrantHues[quadrantIndex] = h
+
+    // Return the analysis results
+    return { hue: h, saturation: s, brightness: l }
+  }
+
+  // Function to analyze all quadrants
+  window.analyzeAllQuadrants = () => {
+    for (let i = 0; i < window.gridConfig.total; i++) {
+      window.analyzeQuadrant(i)
+    }
+
+    // Debug output occasionally
+    if (Math.random() < 0.01) {
+      console.log("Quadrant hues:", window.quadrantHues.slice(0, 5).map(h => h.toFixed(2)) + "...")
+    }
+
+    // Request next frame
+    requestAnimationFrame(window.analyzeAllQuadrants)
+  }
+
+  // Start the analysis loop
+  window.analyzeAllQuadrants()
+}
+
+// Function to rebuild the quadrant visualization
+function rebuildQuadrantViz(parentElement) {
+  // Remove existing visualization
+  const existingViz = document.getElementById('quadrant-viz')
+  if (existingViz) {
+    existingViz.remove()
+  }
+
+  // Create new visualization based on current grid config
+  const quadrantViz = document.createElement('div')
+  quadrantViz.id = 'quadrant-viz'
+  quadrantViz.style.display = 'grid'
+  quadrantViz.style.gridTemplateColumns = `repeat(${window.gridConfig.cols}, 20px)`
+  quadrantViz.style.gridTemplateRows = `repeat(${window.gridConfig.rows}, 20px)`
+  quadrantViz.style.gap = '2px'
+  quadrantViz.style.marginTop = '10px'
+
+  for (let i = 0; i < window.gridConfig.total; i++) {
+    const quadCell = document.createElement('div')
+    quadCell.style.width = '20px'
+    quadCell.style.height = '20px'
+    quadCell.style.background = 'black'
+    quadCell.style.borderRadius = '3px'
+    quadCell.id = `quad-viz-${i}`
+    quadrantViz.appendChild(quadCell)
+  }
+
+  parentElement.appendChild(quadrantViz)
+
+  // Update the visualization
+  updateQuadrantViz()
+}
+
+// Function to update the quadrant visualization
+function updateQuadrantViz() {
+  for (let i = 0; i < window.gridConfig.total; i++) {
+    const quadCell = document.getElementById(`quad-viz-${i}`)
+    if (quadCell && window.quadrantHues[i] !== undefined) {
+      const hue = window.quadrantHues[i]
+      quadCell.style.background = `hsl(${hue * 360}, 100%, 50%)`
+    }
+  }
+
+  // Continue updating
+  setTimeout(updateQuadrantViz, 100)
+}
+
+// Setup visual controls to change Hydra composition
+function setupVisualControls() {
+  // Create control panel
+  const controlPanel = document.createElement('div')
+  controlPanel.style.position = 'absolute'
+  controlPanel.style.bottom = '10px'
+  controlPanel.style.left = '10px'
+  controlPanel.style.zIndex = '9999'
+  controlPanel.style.background = 'rgba(0,0,0,0.7)'
+  controlPanel.style.padding = '10px'
+  controlPanel.style.borderRadius = '5px'
+  controlPanel.style.display = 'flex'
+  controlPanel.style.flexDirection = 'column'
+  controlPanel.style.gap = '10px'
+  document.body.appendChild(controlPanel)
+
+  // Add description
+  const description = document.createElement('div')
+  description.textContent = 'Screen divided into quadrants, each driving a different synth'
+  description.style.color = 'white'
+  description.style.fontSize = '12px'
+  controlPanel.appendChild(description)
+
+  // Create buttons for different visual presets
+  const visualPresets = [
+    {
+      name: "Kaleidoscope",
+      fn: () => {
+        osc(20, 0.1, 0.8)
+          .kaleid(5)
+          .color(0.5, 0.3, 0.9)
+          .rotate(0.1, 0.1)
+          .modulate(noise(3, 0.1).rotate(() => Math.sin(time/2)))
+          .out(o0)
+      }
+    },
+    {
+      name: "Color Waves",
+      fn: () => {
+        osc(10, 0.5, 1.5)
+          .color(0.8, 0.6, () => Math.sin(time/3) * 0.5 + 0.5)
+          .add(osc(15, 0.1, 1).rotate(0.3).color(0.5, 0.1, 0.9), 0.5)
+          .modulate(noise(5).add(shape(4, 0.3, 0)))
+          .rotate(() => time/10)
+          .out(o0)
+      }
+    },
+    {
+      name: "Geometric",
+      fn: () => {
+        shape(4, 0.6, 0)
+          .repeat(5, 5)
+          .modulateScale(osc(10, 0.5, 0))
+          .color(0.9, 0.3, 0.7)
+          .add(shape(3, 0.5, 0.2).rotate(() => time/4), 0.4)
+          .scale(0.8)
+          .out(o0)
+      }
+    },
+    {
+      name: "Noisy",
+      fn: () => {
+        noise(3, 0.5)
+          .color(0.7, 0.2, 0.4)
+          .add(noise(5, 0.1).color(0.1, 0.8, 0.5), 0.6)
+          .modulate(osc(5, 0.1, 0.5).rotate(0.3))
+          .out(o0)
+      }
+    }
+  ]
+
+  // Add buttons for visual presets
+  const presetContainer = document.createElement('div')
+  presetContainer.style.display = 'flex'
+  presetContainer.style.flexWrap = 'wrap'
+  presetContainer.style.gap = '5px'
+
+  visualPresets.forEach(preset => {
+    const button = document.createElement('button')
+    button.textContent = preset.name
+    button.style.padding = '5px'
+    button.style.cursor = 'pointer'
+    button.style.flex = '1'
+    button.style.minWidth = '80px'
+    button.onclick = preset.fn
+    presetContainer.appendChild(button)
+  })
+
+  controlPanel.appendChild(presetContainer)
+
+  // Grid size configuration
+  const gridLabel = document.createElement('div')
+  gridLabel.textContent = 'Quadrant Grid:'
+  gridLabel.style.color = 'white'
+  gridLabel.style.fontSize = '12px'
+  gridLabel.style.marginTop = '10px'
+  controlPanel.appendChild(gridLabel)
+
+  // Create grid size selector
+  const gridSelector = document.createElement('select')
+  gridSelector.style.padding = '5px'
+  gridSelector.style.width = '100%'
+
+  const gridOptions = [
+    { name: "2×2 (4 quadrants)", rows: 2, cols: 2 },
+    { name: "2×4 (8 quadrants)", rows: 2, cols: 4 },
+    { name: "4×4 (16 quadrants)", rows: 4, cols: 4 },
+    { name: "6×6 (36 quadrants)", rows: 6, cols: 6 },
+    { name: "8×8 (64 quadrants)", rows: 8, cols: 8 },
+    { name: "10×10 (100 quadrants)", rows: 10, cols: 10 }
+  ]
+
+  gridOptions.forEach(option => {
+    const optionEl = document.createElement('option')
+    optionEl.value = JSON.stringify({ rows: option.rows, cols: option.cols })
+    optionEl.textContent = option.name
+    if (option.rows === 2 && option.cols === 4) {
+      optionEl.selected = true // Default 2x4
+    }
+    gridSelector.appendChild(optionEl)
+  })
+
+  gridSelector.onchange = (e) => {
+    const newConfig = JSON.parse(e.target.value)
+    window.gridConfig.rows = newConfig.rows
+    window.gridConfig.cols = newConfig.cols
+    window.gridConfig.total = newConfig.rows * newConfig.cols
+
+    // Resize the hues array
+    window.quadrantHues = Array(window.gridConfig.total).fill(0)
+
+    // Recreate synths to match new grid size
+    window.createSynths()
+
+    // Rebuild the visualization
+    rebuildQuadrantViz(controlPanel)
+
+    console.log(`Changed grid to ${window.gridConfig.rows}×${window.gridConfig.cols} (${window.gridConfig.total} quadrants)`)
+  }
+
+  controlPanel.appendChild(gridSelector)
+
+  // Add scale selector dropdown - EXPANDED with 10 options
+  const scaleLabel = document.createElement('div')
+  scaleLabel.textContent = 'Choose Scale:'
+  scaleLabel.style.color = 'white'
+  scaleLabel.style.fontSize = '12px'
+  scaleLabel.style.marginTop = '10px'
+  controlPanel.appendChild(scaleLabel)
+
+  const scaleSelector = document.createElement('select')
+  scaleSelector.style.padding = '5px'
+  scaleSelector.style.width = '100%'
+
+  const scaleOptions = [
+    { name: "C Major", value: "cMajor" },
+    { name: "A Minor", value: "aMinor" },
+    { name: "Pentatonic", value: "pentatonic" },
+    { name: "Blues", value: "blues" },
+    { name: "Chromatic", value: "chromatic" },
+    { name: "D Dorian", value: "dDorian" },
+    { name: "Whole Tone", value: "wholeTone" },
+    { name: "Phrygian", value: "phrygian" },
+    { name: "Lydian", value: "lydian" },
+    { name: "Mixolydian", value: "mixolydian" }
+  ]
+
+  scaleOptions.forEach(option => {
+    const optionEl = document.createElement('option')
+    optionEl.value = option.value
+    optionEl.textContent = option.name
+    scaleSelector.appendChild(optionEl)
+  })
+
+  scaleSelector.onchange = (e) => {
+    window.currentScale = window.scales[e.target.value]
+    console.log("Changed scale to", e.target.value)
+  }
+
+  controlPanel.appendChild(scaleSelector)
+
+  // Add BPM slider
+  const bpmLabel = document.createElement('div')
+  bpmLabel.textContent = 'BPM: 90'
+  bpmLabel.style.color = 'white'
+  bpmLabel.style.fontSize = '12px'
+  bpmLabel.style.marginTop = '10px'
+  controlPanel.appendChild(bpmLabel)
+
+  const bpmSlider = document.createElement('input')
+  bpmSlider.type = 'range'
+  bpmSlider.min = '60'
+  bpmSlider.max = '180'
+  bpmSlider.value = '90'
+  bpmSlider.style.width = '100%'
+
+  bpmSlider.oninput = (e) => {
+    Tone.Transport.bpm.value = parseInt(e.target.value)
+    bpmLabel.textContent = `BPM: ${e.target.value}`
+  }
+
+  controlPanel.appendChild(bpmSlider)
+
+  // Create the initial quadrant visualization
+  rebuildQuadrantViz(controlPanel)
+}

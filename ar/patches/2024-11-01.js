@@ -1,0 +1,17 @@
+await loadScript("https://hyper-hydra.glitch.me/hydra-fractals.js")
+await loadScript("https://hyper-hydra.glitch.me/hydra-wrap.js")
+//hydraWrap.setMirror()
+hydraWrap.setNoWrap()
+
+
+//s0.initScreen()
+src(s0).scale(1).scale(-1,1,-1)
+.scale(.7)
+  .scrollX(0.25,0)
+.scrollY(0.25,0)
+.modulate(noise(5.5,.02))
+.mirrorX(0,1)
+.mirrorY(0,1)
+//.colorama(0.1)
+//.inversion()
+.out()
