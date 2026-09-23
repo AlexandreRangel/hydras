@@ -25,6 +25,16 @@ export function translateArButton(button) {
 }
 
 /**
+ * Labels the soft-AR enter button (iPhone vs other non-WebXR clients).
+ */
+export function labelSoftButton(button) {
+  const isiOS = /iP(hone|ad|od)/.test(navigator.userAgent)
+    || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  button.textContent = isiOS ? 'Entrar (modo iOS)' : 'Entrar em modo soft';
+  button.setAttribute('aria-label', button.textContent);
+}
+
+/**
  * Shows the unsupported-device message and hides the English ARButton fallback.
  */
 export function showUnsupportedFallback(fallbackEl, button) {
@@ -33,30 +43,46 @@ export function showUnsupportedFallback(fallbackEl, button) {
 }
 
 /**
+ * Reveals modo soft as the primary action when immersive-ar is missing.
+ */
+export function showSoftFallback(fallbackEl, softButton, arButton) {
+  showUnsupportedFallback(fallbackEl, arButton);
+  if (softButton) {
+    labelSoftButton(softButton);
+    softButton.hidden = false;
+  }
+}
+
+/**
  * Checks immersive-ar support and reveals the PT-BR fallback when missing.
  */
-export async function checkArSupport(fallbackEl, button) {
+export async function checkArSupport(fallbackEl, button, softButton) {
   if (window.isSecureContext === false || !navigator.xr || typeof navigator.xr.isSessionSupported !== 'function') {
-    showUnsupportedFallback(fallbackEl, button);
-    return;
+    showSoftFallback(fallbackEl, softButton, button);
+    return false;
   }
   try {
     const supported = await navigator.xr.isSessionSupported('immersive-ar');
-    if (!supported) showUnsupportedFallback(fallbackEl, button);
+    if (!supported) {
+      showSoftFallback(fallbackEl, softButton, button);
+      return false;
+    }
+    return true;
   } catch (err) {
     console.warn(err);
-    showUnsupportedFallback(fallbackEl, button);
+    showSoftFallback(fallbackEl, softButton, button);
+    return false;
   }
 }
 
 /**
  * Keeps ARButton text in PT-BR and hides English unsupported labels.
  */
-export function observeArButton(button, fallbackEl) {
+export function observeArButton(button, fallbackEl, softButton) {
   const observer = new MutationObserver(function () {
     translateArButton(button);
     if (UNSUPPORTED_RE.test(button.textContent || '')) {
-      showUnsupportedFallback(fallbackEl, button);
+      showSoftFallback(fallbackEl, softButton, button);
     }
   });
   observer.observe(button, { characterData: true, childList: true, subtree: true });

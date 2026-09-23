@@ -1,11 +1,24 @@
 /**
- * Livro HYDRA AR — WebXR hit-test placement of a live Hydra panel.
+ * Livro HYDRA AR — WebXR hit-test, or soft AR (camera + gyro) when immersive-ar is missing.
  * Hit-test / ARButton flow matches three@0.186 examples/webxr_ar_hittest.html.
  */
 import * as THREE from 'three';
 import { ARButton } from 'three/addons/webxr/ARButton.js';
 import { createHydra, loadPlaylist, runPatch } from './hydra.js';
-import { showHint as fadeHint, translateArButton, showUnsupportedFallback, checkArSupport, observeArButton } from './ui.js';
+import {
+  showHint as fadeHint,
+  translateArButton,
+  showSoftFallback,
+  checkArSupport,
+  observeArButton
+} from './ui.js';
+import {
+  createSoftController,
+  cameraErrorMessage,
+  HINT_SOFT_PLACE,
+  HINT_SOFT_NAV,
+  HINT_SOFT_NO_GYRO
+} from './soft.js';
 
 const PANEL_ASPECT = 16 / 9;
 const PANEL_WIDTH = 1.2;
@@ -25,6 +38,8 @@ const closeBtn = document.getElementById('ar-close');
 const repositionBtn = document.getElementById('ar-reposition');
 const fallbackEl = document.getElementById('fallback');
 const buttonSlot = document.getElementById('ar-button-slot');
+const softEnterBtn = document.getElementById('soft-enter');
+const fallbackDefaultText = fallbackEl.textContent;
 
 let camera;
 let scene;
@@ -42,6 +57,7 @@ let lastPointerTapAt = 0;
 let lastTapAt = 0;
 let placeTimer = null;
 let hintTimer = null;
+let soft = null;
 const unusedScale = new THREE.Vector3();
 const hitNormal = new THREE.Vector3();
 const worldUp = new THREE.Vector3(0, 1, 0);
@@ -75,6 +91,7 @@ function resetPlacement() {
   isPlaced = false;
   if (panel) panel.visible = false;
   if (reticle) reticle.visible = false;
+  if (soft && soft.isActive()) soft.resetPlacement();
   repositionBtn.hidden = true;
 }
 
@@ -122,10 +139,18 @@ function handleTap(normalizedX) {
     return;
   }
   lastTapAt = now;
-  if (isPlaced || !reticle.visible) return;
+  const canPlaceNow = soft && soft.isActive() ? soft.canPlace() : (!isPlaced && reticle.visible);
+  if (!canPlaceNow) return;
   clearTimeout(placeTimer);
   placeTimer = setTimeout(function () {
     placeTimer = null;
+    if (soft && soft.isActive()) {
+      if (soft.place()) {
+        repositionBtn.hidden = false;
+        showHint(HINT_SOFT_NAV, 5500);
+      }
+      return;
+    }
     placePanel();
   }, DOUBLE_TAP_MS);
 }
@@ -141,6 +166,7 @@ function createScene() {
   light.position.set(0.5, 1, 0.25);
   scene.add(light);
   renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+  renderer.setClearColor(0x000000, 0);
   renderer.setPixelRatio(window.devicePixelRatio);
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.setAnimationLoop(animate);
@@ -218,7 +244,9 @@ function onSessionStart() {
  */
 function animate(timestamp, frame) {
   if (hydraTexture) hydraTexture.needsUpdate = true;
-  if (frame) {
+  if (soft && soft.isActive()) {
+    soft.update();
+  } else if (frame) {
     const referenceSpace = renderer.xr.getReferenceSpace();
     const session = renderer.xr.getSession();
     if (hitTestSourceRequested === false) {
@@ -267,11 +295,50 @@ function onOverlayPointerDown(event) {
 }
 
 /**
+ * Enters camera + gyro soft AR when WebXR immersive-ar is unavailable.
+ */
+async function startSoftSession() {
+  if (soft && soft.isActive()) return;
+  fallbackEl.textContent = fallbackDefaultText;
+  try {
+    const result = await soft.start();
+    document.body.classList.add('is-presenting');
+    landing.hidden = true;
+    resetPlacement();
+    showHint(result.hasOrientation ? HINT_SOFT_PLACE : HINT_SOFT_NO_GYRO, 7000);
+  } catch (err) {
+    console.warn(err);
+    fallbackEl.textContent = cameraErrorMessage(err);
+    fallbackEl.classList.add('show');
+  }
+}
+
+/**
+ * Leaves soft AR and restores the landing page.
+ */
+function endSoftSession() {
+  if (soft) soft.stop();
+  document.body.classList.remove('is-presenting');
+  landing.hidden = false;
+  resetPlacement();
+  hintEl.classList.remove('show');
+}
+
+/**
  * Mounts ARButton with hit-test + this page's DOM overlay, then starts Hydra.
  */
 async function init() {
   createHydra(hydraCanvas);
   createScene();
+  soft = createSoftController({
+    camera: camera,
+    scene: scene,
+    hydraTexture: hydraTexture,
+    videoEl: document.getElementById('soft-camera'),
+    reticleEl: document.getElementById('ar-reticle'),
+    panelWidth: PANEL_WIDTH,
+    panelHeight: PANEL_HEIGHT
+  });
   const sessionInit = {
     requiredFeatures: ['hit-test'],
     optionalFeatures: ['dom-overlay'],
@@ -279,22 +346,30 @@ async function init() {
   };
   const arButton = ARButton.createButton(renderer, sessionInit);
   buttonSlot.appendChild(arButton);
-  if (arButton.tagName === 'A') showUnsupportedFallback(fallbackEl, arButton);
+  if (arButton.tagName === 'A') showSoftFallback(fallbackEl, softEnterBtn, arButton);
   translateArButton(arButton);
-  observeArButton(arButton, fallbackEl);
-  checkArSupport(fallbackEl, arButton);
+  observeArButton(arButton, fallbackEl, softEnterBtn);
+  checkArSupport(fallbackEl, arButton, softEnterBtn);
   renderer.xr.addEventListener('sessionstart', onSessionStart);
   renderer.xr.addEventListener('sessionend', onSessionEnd);
   window.addEventListener('resize', onWindowResize);
   tapLayer.addEventListener('pointerdown', onOverlayPointerDown);
+  softEnterBtn.addEventListener('click', function (event) {
+    event.preventDefault();
+    startSoftSession().catch(function (err) { console.error(err); });
+  });
   closeBtn.addEventListener('click', function (event) {
     event.stopPropagation();
+    if (soft && soft.isActive()) {
+      endSoftSession();
+      return;
+    }
     endSession();
   });
   repositionBtn.addEventListener('click', function (event) {
     event.stopPropagation();
     resetPlacement();
-    showHint(HINT_PLACE, 5000);
+    showHint(soft && soft.isActive() ? HINT_SOFT_PLACE : HINT_PLACE, 5000);
   });
   playlist = await loadPlaylist();
   try {
