@@ -1,0 +1,7 @@
+osc(16,-0.01,0.75).kaleid(30).pixelate()
+.modulateScrollX(osc(8,-0.003,0).kaleid(30).pixelate(),-1)
+.rotate(Math.PI/-2)
+.modulateScrollX( osc(2,0.1,0), .1)
+.modulateScrollY( osc(2,0.09,0), .1)
+.kaleid(2).colorama( ()=>Math.sin(time/5)*0.07 -0.1)
+  .out()

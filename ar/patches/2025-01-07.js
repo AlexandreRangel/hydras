@@ -1,0 +1,10 @@
+speed=0.75
+noise(4,0.00001).thresh(0.5,0.7).scrollY(0.01,0.01).colorama(()=>Math.sin(time/9.2)*0.1+0.15)
+.diff( noise(2,0.000001).thresh(0.5,0).scrollY(0.01,-0.01).colorama(()=>Math.cos(time/7.25)*0.31+0.31) )
+.pixelate(20,20)
+.scale(1,1,()=>Math.sin(time/10.1)*0.6+1.2)
+.scrollY(0.01,-0.02)
+.modulate( noise(0.9,0.0003) )
+.modulateScale( noise(0.8,0.0002) )
+.kaleid(2).repeat(2,1).kaleid(2)
+.out()

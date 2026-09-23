@@ -1,0 +1,7 @@
+osc(30, 0.1, 1)
+  .hue(() => time * 0.1)
+  .rotate(() => Math.sin(time) * 0.5)
+  .repeat(12, 12)
+.modulate(noise(4,0.1))
+  //.mask(shape(100, 0.5, 0.1))
+  .out(o0)

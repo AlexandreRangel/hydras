@@ -1,0 +1,13 @@
+speed=0.9
+noise(1,0.1/3).pixelate(9,9).color(2,2,2)
+.mult( noise(2,0.1/3).pixelate(9*4,9*4).luma(0.25,0) )
+.add( noise(5,0.2/3).pixelate(9*8,9*8).luma(0.25,0).color(1,0,0) )
+.add( noise(1,0.1/3).pixelate(9*8,9*8).luma(0.5,0.1).color(2,1,0) )
+.out(o1)
+src(o1).modulateScale( shape(2,0.28,0), 4.2).out(o2)
+src(o1).diff( src(o2).invert().color(0.25,-0.5,0.25).scale(2).mask( shape(2,0.28,0) ) )
+.scale(1.333)
+.rotate(Math.PI/2,0)
+//.repeat(2,1)
+.kaleid(4)
+.out()

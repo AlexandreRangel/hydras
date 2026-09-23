@@ -1,0 +1,22 @@
+shape(4,0.9,()=>Math.cos(time/2)*0.2+0.25).rotate( ()=> time/40 )
+.colorama( ()=>Math.sin(time/5)*0.1 )
+.diff( shape(4,0.6,()=>Math.cos(time/3)*0.2+0.25)
+      .rotate( ()=> time/-20 )
+     .colorama( ()=>Math.cos(time/2.5)*0.1 ))
+.diff( shape(4,0.25,()=>Math.cos(time/4)*0.2+0.25)
+      .rotate( ()=> time/-20 )
+     .colorama( ()=>Math.sin(time/7.5)*0.1 ))
+.diff( shape(4,0.25,()=>Math.cos(time/5)*0.2+0.25)
+      .rotate( ()=> time/-20 )
+     .colorama( ()=>Math.sin(time/10)*0.1 ))
+.diff( shape(4,0.5,()=>Math.cos(time/6)*0.2+0.25)
+      .scale( ()=>Math.cos(time/22.5)*0.5+0.6 )
+      .rotate( ()=> time/20 )
+     .colorama( ()=>Math.sin(time/15)*0.1 ))
+.diff( shape(90,()=>Math.sin(time/15)*0.5+0.525),
+     ()=>Math.cos(time/7)*0.3+0.4)
+.diff( shape(90,()=>Math.sin(time/20)*0.5+0.525),
+     ()=>Math.cos(time/8)*0.3+0.4)
+.diff( shape(90,()=>Math.sin(time/25)*0.5+0.525),
+     ()=>Math.cos(time/9)*0.3+0.4)
+.out()

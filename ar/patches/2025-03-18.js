@@ -1,0 +1,15 @@
+shape(4,0.1,0).scale(1,1,16/9).scrollY(0.01,0.01)
+.add( shape(4,0.1,0).scale(1,1,16/9).scrollX(-0.1).scrollY(0.01,-0.01) )
+.add( shape(4,0.1,0).scale(1,1,16/9).scrollX(+0.1).scrollY(0.01,-0.01) )
+.add( shape(4,0.1,0).scale(1,1,16/9).scrollX(-0.2).scrollY(0.01,0.01) )
+//.add( shape(4,0.1,0).scale(1,1,16/9).scrollX(+0.2).scrollY(0.01,0.01) )
+.repeat(3,4)
+.modulateScrollX( osc(50,-0.005).thresh(0.5,0), 0.1 )
+.modulateScrollX( voronoi(5,0.05).thresh(0.5,0), 0.1 )
+.modulateScrollX( voronoi(10,0.075).thresh(0.5,0.00), 0.1 )
+.modulateScrollY( voronoi(5,0.02).thresh(0.5,00), -0.025 )
+.scrollX(0.01,0.005)
+.add(
+  osc(120,0).rotate(Math.PI/2).thresh(0.995,0).scrollY(0.014,0), 0.7 
+)
+.out()

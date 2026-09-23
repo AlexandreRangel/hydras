@@ -1,0 +1,5 @@
+noise(1.5,0.01).thresh(0.5,0.5).pixelate(16,9)
+.diff(src(o0).scale(0.999),1)
+.colorama(-0.01)
+.modulateScale(shape(2,0.55,0),1.22)
+.out()
