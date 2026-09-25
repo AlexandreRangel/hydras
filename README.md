@@ -4,6 +4,8 @@ Fullscreen Hydra patches for **Livro HYDRA** (QR codes in the printed book).
 
 Live: [https://alexandrerangel.github.io/hydras/](https://alexandrerangel.github.io/hydras/)
 
+**Livro HYDRA (PDF):** [https://alexandrerangel.github.io/hydras/livro/LivroHydra.pdf](https://alexandrerangel.github.io/hydras/livro/LivroHydra.pdf) — web-quality book PDF.
+
 **AR:** [https://alexandrerangel.github.io/hydras/ar/](https://alexandrerangel.github.io/hydras/ar/) — live Hydra panel. **Android Chrome** uses WebXR hit-test (anchors to a wall or floor). **iPhone Safari** has no WebXR AR; the page offers **modo soft** (rear camera + gyroscope; approximate / not SLAM). HTTPS is required. Playlist starts with The Wall (`2025-11-10`, `2025-09-11`). Record with the phone OS, not an in-app recorder.
 
 ## Entries
